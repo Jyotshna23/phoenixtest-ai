@@ -30,7 +30,34 @@ PhoenixTest AI is an autonomous self-healing test automation agent. When UI chan
 **🏛️ Government** — Government portal updates break citizen service tests. AI ensures services stay accessible.
 
 ## 🏗️ How It Works
+UI Change Detected (button ID changed)
+↓
+PhoenixTest AI analyzes old vs new UI
+↓
+AI identifies: "btn-login → btn-signin"
+↓
+Test automatically healed with new XPath
+↓
+✅ Test passes — zero manual work!
+↓
+Report: 4 broken → 4 healed in seconds
 ## 📊 Sample Output
+🔥 PHOENIXTEST AI - SELF-HEALING TEST AUTOMATION AGENT
+🔍 STEP 1: Detecting UI Changes...
+⚠️  4 UI changes detected!
+🤖 STEP 2: AI Self-Healing Tests...
+❌ BROKEN: Login Button Click
+Old XPath: //button[@id='btn-login']
+✅ HEALED: Login Button Click
+New XPath: //button[@id='btn-signin']
+Confidence: 98%
+Reason: Button text changed from Login to Sign In
+📊 PHOENIXTEST AI REPORT
+Total Tests: 4
+Broken Tests Detected: 4
+Auto-Healed by AI: 4
+Healing Success Rate: 100%
+Manual Fix Time Saved: 120 minutes
 ## 🛠️ Tech Stack
 
 | Tool | Purpose |
