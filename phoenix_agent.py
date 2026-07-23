@@ -63,7 +63,7 @@ Fix the test by updating the xpath and element details. Respond in JSON only:
 }}"""
 
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-flash-latest",
         contents=prompt
     )
     text = response.text.strip()
