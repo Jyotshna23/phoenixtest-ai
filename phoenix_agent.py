@@ -43,7 +43,7 @@ def detect_ui_changes(original, changed):
                 })
     return changes
 
-def heal_test_with_ai(test, ui_change):
+def heal_test_with_ai(test, ui_change, retries=2):
     prompt = f"""You are an expert QA automation engineer. A UI element has changed and the test is broken.
 
 Broken Test:
@@ -62,30 +62,43 @@ Fix the test by updating the xpath and element details. Respond in JSON only:
     "confidence": 95
 }}"""
 
-    response = client.models.generate_content(
-        model="gemini-flash-latest",
-        contents=prompt
-    )
-    text = response.text.strip()
-    text = text.replace('```json', '').replace('```', '').strip()
-    return json.loads(text)
+    for attempt in range(retries + 1):
+        try:
+            response = client.models.generate_content(
+                model="gemini-flash-latest",
+                contents=prompt
+            )
+            text = response.text.strip()
+            text = text.replace('```json', '').replace('```', '').strip()
+            return json.loads(text)
+        except Exception as e:
+            if attempt == retries:
+                return {
+                    "name": test['name'],
+                    "element": test['element'],
+                    "action": test['action'],
+                    "xpath": test['xpath'],
+                    "healing_reason": f"AI healing failed: {str(e)[:150]}",
+                    "confidence": 0
+                }
+            time.sleep(10)
 
 def run_phoenix_agent():
     print("=" * 65)
-    print("🔥 PHOENIXTEST AI - SELF-HEALING TEST AUTOMATION AGENT")
+    print("PHOENIXTEST AI - SELF-HEALING TEST AUTOMATION AGENT")
     print("=" * 65)
-    print(f"⏰ Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"🧪 Total Tests: {len(ORIGINAL_TESTS)}")
+    print(f"Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"Total Tests: {len(ORIGINAL_TESTS)}")
     print("=" * 65)
 
-    print("\n🔍 STEP 1: Detecting UI Changes...")
+    print("\nSTEP 1: Detecting UI Changes...")
     changes = detect_ui_changes(ORIGINAL_UI, CHANGED_UI)
-    print(f"⚠️  {len(changes)} UI changes detected!")
+    print(f"{len(changes)} UI changes detected!")
     for change in changes:
         print(f"   Element: {change['element']}")
-        print(f"   Old ID: {change['old_id']} → New ID: {change['new_id']}")
+        print(f"   Old ID: {change['old_id']} -> New ID: {change['new_id']}")
 
-    print("\n🤖 STEP 2: AI Self-Healing Tests...")
+    print("\nSTEP 2: AI Self-Healing Tests...")
     healed_tests = []
     broken_count = 0
     healed_count = 0
@@ -95,30 +108,33 @@ def run_phoenix_agent():
 
         if ui_change:
             broken_count += 1
-            print(f"\n❌ BROKEN: {test['name']}")
+            print(f"\nBROKEN: {test['name']}")
             print(f"   Old XPath: {test['xpath']}")
             time.sleep(2)
             healed = heal_test_with_ai(test, ui_change)
             healed_tests.append(healed)
-            healed_count += 1
-            print(f"✅ HEALED: {healed['name']}")
-            print(f"   New XPath: {healed['xpath']}")
-            print(f"   Confidence: {healed['confidence']}%")
-            print(f"   Reason: {healed['healing_reason']}")
+            if healed["confidence"] > 0:
+                healed_count += 1
+                print(f"HEALED: {healed['name']}")
+                print(f"   New XPath: {healed['xpath']}")
+                print(f"   Confidence: {healed['confidence']}%")
+                print(f"   Reason: {healed['healing_reason']}")
+            else:
+                print(f"HEALING FAILED: {healed['name']}")
+                print(f"   Reason: {healed['healing_reason']}")
         else:
             healed_tests.append(test)
-            print(f"\n✅ PASSING: {test['name']}")
+            print(f"\nPASSING: {test['name']}")
 
     print("\n" + "=" * 65)
-    print("📊 PHOENIXTEST AI REPORT")
+    print("PHOENIXTEST AI REPORT")
     print("=" * 65)
-    print(f"🧪 Total Tests: {len(ORIGINAL_TESTS)}")
-    print(f"❌ Broken Tests Detected: {broken_count}")
-    print(f"✅ Auto-Healed by AI: {healed_count}")
-    print(f"🎯 Healing Success Rate: {(healed_count/broken_count*100) if broken_count > 0 else 100}%")
-    print(f"⏱️  Manual Fix Time Saved: {healed_count * 30} minutes")
+    print(f"Total Tests: {len(ORIGINAL_TESTS)}")
+    print(f"Broken Tests Detected: {broken_count}")
+    print(f"Auto-Healed by AI: {healed_count}")
+    print(f"Healing Success Rate: {(healed_count/broken_count*100) if broken_count > 0 else 100}%")
     print("=" * 65)
-    print("🔥 PhoenixTest AI: Tests never die, they self-heal!")
+    print("PhoenixTest AI run complete.")
 
 if __name__ == "__main__":
     run_phoenix_agent()
