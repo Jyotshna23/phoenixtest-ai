@@ -1,12 +1,24 @@
-from google import genai
 import json
 import os
 import time
+import logging
 from datetime import datetime
+from google import genai
+from google.genai import types
+from pydantic import BaseModel, Field
+
+# Enterprise Logging Framework Setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    handlers=[logging.StreamHandler()]
+)
 
 client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+MODEL = "gemini-2.5-flash"
+CONFIDENCE_THRESHOLD = 75
 
-# Simulated UI elements - In real world, these come from Selenium/Playwright
+# Simulated UI Elements Architecture
 ORIGINAL_UI = {
     "login_button": {"id": "btn-login", "xpath": "//button[@id='btn-login']", "text": "Login"},
     "username_field": {"id": "username", "xpath": "//input[@id='username']", "text": ""},
@@ -14,7 +26,6 @@ ORIGINAL_UI = {
     "submit_btn": {"id": "submit", "xpath": "//button[@id='submit']", "text": "Submit"}
 }
 
-# Simulated UI after change - button ID changed!
 CHANGED_UI = {
     "login_button": {"id": "btn-signin", "xpath": "//button[@id='btn-signin']", "text": "Sign In"},
     "username_field": {"id": "user-email", "xpath": "//input[@id='user-email']", "text": ""},
@@ -28,6 +39,14 @@ ORIGINAL_TESTS = [
     {"name": "Enter Password", "element": "password_field", "action": "type", "xpath": "//input[@id='password']"},
     {"name": "Submit Form", "element": "submit_btn", "action": "click", "xpath": "//button[@id='submit']"}
 ]
+
+class HealingResponseSchema(BaseModel):
+    name: str = Field(description="The original name of the test instance")
+    element: str = Field(description="The key identifier of the UI target element")
+    action: str = Field(description="The technical automation execution command type")
+    xpath: str = Field(description="The newly generated, corrected and valid XPath string parameter")
+    healing_reason: str = Field(description="Logical explanation for why this new xpath selection is accurate")
+    confidence: int = Field(description="Integer rating score from 0 to 100 based on mapping accuracy")
 
 def detect_ui_changes(original, changed):
     changes = []
@@ -44,62 +63,49 @@ def detect_ui_changes(original, changed):
     return changes
 
 def heal_test_with_ai(test, ui_change, retries=2):
-    prompt = f"""You are an expert QA automation engineer. A UI element has changed and the test is broken.
-
-Broken Test:
-{json.dumps(test, indent=2)}
-
-UI Change Detected:
-{json.dumps(ui_change, indent=2)}
-
-Fix the test by updating the xpath and element details. Respond in JSON only:
-{{
-    "name": "{test['name']}",
-    "element": "{test['element']}",
-    "action": "{test['action']}",
-    "xpath": "new xpath here",
-    "healing_reason": "why this fix works",
-    "confidence": 95
-}}"""
+    prompt = f"""You are an elite QA automation engineer. A UI element change has broken an active execution test block.
+    Target Test Meta: {json.dumps(test)}
+    Telemetry UI Change Event: {json.dumps(ui_change)}
+    Analyse metadata properties and map out the correct new xpath parameters."""
 
     for attempt in range(retries + 1):
         try:
             response = client.models.generate_content(
-                model="gemini-flash-latest",
-                contents=prompt
+                model=MODEL,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    response_schema=HealingResponseSchema,
+                    temperature=0.1
+                )
             )
-            text = response.text.strip()
-            text = text.replace('```json', '').replace('```', '').strip()
-            return json.loads(text)
+            return json.loads(response.text)
         except Exception as e:
             if attempt == retries:
+                logging.error(f"Autonomous Healing Pipeline Context Fault: {e}")
                 return {
                     "name": test['name'],
                     "element": test['element'],
                     "action": test['action'],
                     "xpath": test['xpath'],
-                    "healing_reason": f"AI healing failed: {str(e)[:150]}",
+                    "healing_reason": f"Self-healing session execution error boundary caught: {str(e)[:100]}",
                     "confidence": 0
                 }
-            time.sleep(10)
+            time.sleep(3)
 
 def run_phoenix_agent():
-    print("=" * 65)
-    print("PHOENIXTEST AI - SELF-HEALING TEST AUTOMATION AGENT")
-    print("=" * 65)
-    print(f"Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Total Tests: {len(ORIGINAL_TESTS)}")
-    print("=" * 65)
+    logging.info("=" * 60)
+    logging.info("PHOENIXTEST AI ENGINE — INITIALIZING SELF-HEALING SUITE")
+    logging.info("=" * 60)
+    logging.info(f"Scan Lifecyle Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logging.info(f"Total Test Sequence Count: {len(ORIGINAL_TESTS)}")
+    logging.info("=" * 60)
 
-    print("\nSTEP 1: Detecting UI Changes...")
+    logging.info("Executing Pipeline Node Step 1: Parsing UI Delta Metrics...")
     changes = detect_ui_changes(ORIGINAL_UI, CHANGED_UI)
-    print(f"{len(changes)} UI changes detected!")
-    for change in changes:
-        print(f"   Element: {change['element']}")
-        print(f"   Old ID: {change['old_id']} -> New ID: {change['new_id']}")
+    logging.info(f"Telemetry Scan Results: {len(changes)} active structural changes caught.")
 
-    print("\nSTEP 2: AI Self-Healing Tests...")
-    healed_tests = []
+    logging.info("Executing Pipeline Node Step 2: Running Generative Diagnostics...")
     broken_count = 0
     healed_count = 0
 
@@ -108,33 +114,34 @@ def run_phoenix_agent():
 
         if ui_change:
             broken_count += 1
-            print(f"\nBROKEN: {test['name']}")
-            print(f"   Old XPath: {test['xpath']}")
-            time.sleep(2)
+            logging.warning(f"CRITICAL FAULT DETECTED: Core Test Instance Broken -> [ {test['name']} ]")
+            logging.info(f"   Decommissioned Legacy XPath Target: {test['xpath']}")
+            
+            time.sleep(1)
             healed = heal_test_with_ai(test, ui_change)
-            healed_tests.append(healed)
-            if healed["confidence"] > 0:
+            
+            if healed["confidence"] >= CONFIDENCE_THRESHOLD:
                 healed_count += 1
-                print(f"HEALED: {healed['name']}")
-                print(f"   New XPath: {healed['xpath']}")
-                print(f"   Confidence: {healed['confidence']}%")
-                print(f"   Reason: {healed['healing_reason']}")
+                logging.info(f"   SUCCESSFULLY HEALED: Target [ {healed['name']} ] Repaired Programmatically.")
+                logging.info(f"   Patched Active XPath Target: {healed['xpath']}")
+                logging.info(f"   AI Engine Mapping Confidence Index: {healed['confidence']}%")
+                logging.info(f"   Diagnostics Resolution Trace: {healed['healing_reason']}")
             else:
-                print(f"HEALING FAILED: {healed['name']}")
-                print(f"   Reason: {healed['healing_reason']}")
+                logging.error(f"   AUTOMATED HEALING ABORTED: Confidence index below safety threshold boundary.")
+                logging.error(f"   Reason Code Log: {healed['healing_reason']}")
         else:
-            healed_tests.append(test)
-            print(f"\nPASSING: {test['name']}")
+            logging.info(f"PASSING INTEGRITY CHECK: Test Node Clear -> [ {test['name']} ]")
 
-    print("\n" + "=" * 65)
-    print("PHOENIXTEST AI REPORT")
-    print("=" * 65)
-    print(f"Total Tests: {len(ORIGINAL_TESTS)}")
-    print(f"Broken Tests Detected: {broken_count}")
-    print(f"Auto-Healed by AI: {healed_count}")
-    print(f"Healing Success Rate: {(healed_count/broken_count*100) if broken_count > 0 else 100}%")
-    print("=" * 65)
-    print("PhoenixTest AI run complete.")
+    logging.info("=" * 60)
+    logging.info("PHOENIXTEST SUMMARY METRICS REPORT")
+    logging.info("=" * 60)
+    logging.info(f"Total Evaluated Nodes: {len(ORIGINAL_TESTS)}")
+    logging.info(f"Total Intercepted Faults: {broken_count}")
+    logging.info(f"Total Successful Deployments: {healed_count}")
+    success_rate = (healed_count / broken_count * 100) if broken_count > 0 else 100.0
+    logging.info(f"Automated Self-Healing Operational Success Ratio: {success_rate:.2f}%")
+    logging.info("=" * 60)
+    logging.info("PhoenixTest Agent Lifecycle Management Complete.")
 
 if __name__ == "__main__":
     run_phoenix_agent()
