@@ -1,30 +1,33 @@
-name: PhoenixTest AI - Self-Healing Agent
+name: Enterprise PhoenixTest AI Automation Agent
 
 on:
-  push:
-    branches: [ main ]
   schedule:
     - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  self-healing-tests:
+  run-phoenix-agent:
+    name: Execute Autonomous Self-Healing Test Agent
     runs-on: ubuntu-latest
-
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout Code Architecture
+        uses: actions/checkout@v4
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
+      - name: Configure Python Execution Environment
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
 
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
+      - name: Install Enterprise Automation Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-genai pydantic
 
-    - name: Run PhoenixTest AI Agent
-      env:
-        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      run: |
-        python phoenix_agent.py
+      - name: Execute Live AI Self-Healing Diagnostics
+        run: python phoenix_agent.py
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
