@@ -1,85 +1,71 @@
-# 🔥 PhoenixTest AI — Self-Healing Test Automation Agent
+# PhoenixTest AI
 
-![Pipeline](https://github.com/Jyotshna23/phoenixtest-ai/actions/workflows/phoenix.yml/badge.svg)
-![Python](https://img.shields.io/badge/Python-3.11-blue)
-![AI](https://img.shields.io/badge/AI-Gemini-orange)
-![Testing](https://img.shields.io/badge/Testing-Self--Healing-red)
+A self-healing Selenium locator helper. When a Selenium locator breaks, PhoenixTest AI sends the current page HTML to Google Gemini, gets back a replacement CSS selector, checks it against safety guardrails, and logs every attempt.
 
-## 🚨 Problem Statement
+This is a personal learning project. The numbers below come from a small experiment on one public demo site, not a benchmark.
 
-Every time developers change UI — button IDs, XPaths, element names — all automation tests break. QA teams spend days manually fixing broken tests instead of finding real bugs. Companies lose lakhs every sprint on test maintenance alone.
+## How it works
 
-## ⚡ What This Project Does
+1. A test calls `find_with_healing(driver, by, value, description)` instead of `driver.find_element(...)`.
+2. If the normal lookup works, nothing else happens.
+3. If it raises `NoSuchElementException`, the page HTML is cleaned (scripts, styles, SVG and comments removed) and sent to Gemini with a plain-English description of the element.
+4. Gemini returns structured JSON (validated with a Pydantic schema): a CSS selector, a reason, and a confidence score.
+5. Guardrails: the fix is accepted only if confidence is at least 75 and the selector matches exactly one element on the page. Otherwise the test fails with a clear error.
+6. Every attempt (old locator, new locator, confidence, reason, seconds, healed or not) is appended to `healing_log.json`.
 
-PhoenixTest AI is an autonomous self-healing test automation agent. When UI changes break tests, AI automatically detects the change, understands the new element, and heals the test — zero human intervention required.
+## Files
 
-- ✅ Automatically detects UI changes
-- ✅ AI heals broken tests instantly
-- ✅ Saves 30+ minutes per broken test
-- ✅ Runs every 6 hours via GitHub Actions
-- ✅ 100% healing success rate
+| File | Purpose |
+|---|---|
+| `healer.py` | Healing logic: Gemini call, schema validation, guardrails, logging |
+| `tests/test_saucedemo.py` | Plain Selenium and PyTest tests (login, add to cart, checkout) on saucedemo.com |
+| `tests/test_healing_rate.py` | Breaks 6 locators on purpose and checks the healed element is the correct one |
+| `summary.py` | Reads `healing_log.json` and prints heal count and timings |
+| `phoenix_agent.py` | Original version of the agent. It works on simulated UI snapshots, not a real browser |
+| `.github/workflows/` | GitHub Actions workflow file (the Selenium tests are not run in CI yet) |
 
-## 🌍 Real World Impact
+## Experiment results
 
-**🏥 Healthcare** — Hospital portal UI updates break patient booking tests. PhoenixTest AI heals them instantly — no patient is left unserved.
+Setup: saucedemo.com login page, 6 locators broken on purpose, model `gemini-3.8-flash`. For each one the test asserts that the healed element has the correct `id`, so a wrong but confident answer would fail.
 
-**🏦 Banking** — Banking app UI changes break payment flow tests. AI ensures payment tests always run — zero financial risk.
+| Broken locator | Healed to | Seconds |
+|---|---|---|
+| `id=usr-name` | `#user-name` | 153.7 |
+| `id=pwd` | `#password` | 452.0 |
+| `id=login-btn` | `#login-button` | 17.1 |
+| `css=input.login-submit` | `#login-button` | 38.5 |
+| `xpath=//input[@id='username-field']` | `[data-test="username"]` | 14.0 |
+| `name=pass-word` | `#password` | 37.4 |
 
-**🛒 E-Commerce** — Flipkart, Amazon update UI daily. Self-healing tests ensure checkout never breaks.
+Result: 6 of 6 healed to the correct element.
 
-**🏛️ Government** — Government portal updates break citizen service tests. AI ensures services stay accessible.
+About the timings: the first two runs were paused by my terminal while I was measuring, so 153.7 s and 452.0 s are not reliable. The other four took between 14 and 38 seconds. Latency is the main weakness of this approach.
 
-## 🏗️ How It Works
-UI Change Detected (button ID changed)
-↓
-PhoenixTest AI analyzes old vs new UI
-↓
-AI identifies: "btn-login → btn-signin"
-↓
-Test automatically healed with new XPath
-↓
-✅ Test passes — zero manual work!
-↓
-Report: 4 broken → 4 healed in seconds
-## 📊 Sample Output
-🔥 PHOENIXTEST AI - SELF-HEALING TEST AUTOMATION AGENT
-🔍 STEP 1: Detecting UI Changes...
-⚠️  4 UI changes detected!
-🤖 STEP 2: AI Self-Healing Tests...
-❌ BROKEN: Login Button Click
-Old XPath: //button[@id='btn-login']
-✅ HEALED: Login Button Click
-New XPath: //button[@id='btn-signin']
-Confidence: 98%
-Reason: Button text changed from Login to Sign In
-📊 PHOENIXTEST AI REPORT
-Total Tests: 4
-Broken Tests Detected: 4
-Auto-Healed by AI: 4
-Healing Success Rate: 100%
-Manual Fix Time Saved: 120 minutes
-## 🛠️ Tech Stack
+## Limitations
 
-| Tool | Purpose |
-|------|---------|
-| Google Gemini AI | Intelligent test healing |
-| GitHub Actions | Automated scheduling |
-| Python 3.11 | Core agent logic |
-| XPath | Element identification |
+- Small sample: 6 locators, one website, one page, broken by me on purpose.
+- Confidence is the score Gemini reports about itself, not a measured accuracy.
+- Only the first 30,000 characters of cleaned HTML are sent, so very large pages may be cut off.
+- Each heal takes tens of seconds, which is too slow for large suites without caching.
+- The Selenium tests need Chrome installed and are not part of the GitHub Actions workflow yet.
 
-## 🚀 How To Run Locally
+## Run it
 
-```bash
-git clone https://github.com/Jyotshna23/phoenixtest-ai.git
-cd phoenixtest-ai
+```
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
-export GEMINI_API_KEY=your_key_here
-python phoenix_agent.py
+set GEMINI_API_KEY=your_key_here
+pytest tests\test_saucedemo.py -v
+pytest tests\test_healing_rate.py -v -s
+python summary.py
 ```
 
-## 👩‍💻 Author
+Never commit your API key.
 
-**Jyotshna Pogiri** — Software Engineer | QA Automation Enthusiast
+## Next steps
 
-GitHub: https://github.com/Jyotshna23
-Email: jahnavipogiri3@gmail.com
+- Expose the healer as a small FastAPI endpoint.
+- Cache healed locators so each broken locator costs one Gemini call.
+- Store results in SQLite and add a simple dashboard.
+- Run the Selenium tests in GitHub Actions with headless Chrome.

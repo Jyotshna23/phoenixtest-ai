@@ -1,0 +1,62 @@
+[
+  {
+    "time": "2026-10-24T11:35:36",
+    "element": "the username input on the login page",
+    "old_locator": "id=usr-name",
+    "new_locator": "#user-name",
+    "confidence": 100,
+    "reason": "The input element representing the username field has the id 'user-name', correcting the broken locator 'usr-name'.",
+    "seconds": 153.7,
+    "healed": true
+  },
+  {
+    "time": "2026-10-24T12:05:29",
+    "element": "the password input on the login page",
+    "old_locator": "id=pwd",
+    "new_locator": "#password",
+    "confidence": 100,
+    "reason": "The password input element has an id attribute 'password' which uniquely identifies it on the page.",
+    "seconds": 452.0,
+    "healed": true
+  },
+  {
+    "time": "2026-10-24T12:16:07",
+    "element": "the Login button on the login page",
+    "old_locator": "id=login-btn",
+    "new_locator": "#login-button",
+    "confidence": 100,
+    "reason": "The login submit input has the id attribute 'login-button' (and data-test='login-button'), which uniquely identifies the Login button on the page.",
+    "seconds": 17.1,
+    "healed": true
+  },
+  {
+    "time": "2026-10-24T12:16:36",
+    "element": "the Login button on the login page",
+    "old_locator": "css selector=input.login-submit",
+    "new_locator": "#login-button",
+    "confidence": 100,
+    "reason": "The login submit input element has a unique ID of 'login-button' and a matching 'data-test' attribute value.",
+    "seconds": 38.5,
+    "healed": true
+  },
+  {
+    "time": "2026-10-24T12:17:26",
+    "element": "the username input on the login page",
+    "old_locator": "xpath=//input[@id='username-field']",
+    "new_locator": "[data-test=\"username\"]",
+    "confidence": 100,
+    "reason": "Targets the username input field directly using its unique data-test attribute.",
+    "seconds": 14.0,
+    "healed": true
+  },
+  {
+    "time": "2026-10-24T12:17:48",
+    "element": "the password input on the login page",
+    "old_locator": "name=pass-word",
+    "new_locator": "#password",
+    "confidence": 100,
+    "reason": "Matches the password input field uniquely by its id attribute.",
+    "seconds": 37.4,
+    "healed": true
+  }
+]

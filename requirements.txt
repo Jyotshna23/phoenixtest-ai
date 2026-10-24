@@ -1,1 +1,5 @@
-google-genai==1.16.0
+google-genai==1.47.0
+pydantic==2.13.5
+pydantic_core==2.46.5
+pytest==8.4.2
+selenium==4.36.0
